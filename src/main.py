@@ -52,13 +52,15 @@ class Block:
             block.append(row)
         return block
 
-    def cw_rotation(self):
+    def cw_rotation(self) -> 'Block':
         state = self.build_empty_block()
         for r in range(self.size):
             for c in range(self.size):
                 state[r][c] = self.template[self.size - c - 1][r]
 
-        self.template = state
+        block = self.__class__()
+        block.template = state
+        return block
 
     def ccw_rotation(self):
         state = self.build_empty_block()
@@ -146,15 +148,28 @@ class LeftLBlock(Block):
         super().__init__(len(self.template))
 
 
+class TBlock(Block):
+
+    def __init__(self) -> None:
+        self.template = [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 0, 0],
+        ]
+        super().__init__(len(self.template))
+
+
 BLOCKS = [
     SquareBlock,
     LineBlock,
     LeftLBlock,
     RightLBlock,
     LeftSBlock,
-    RightSBlock
+    RightSBlock,
+    TBlock
 ]
 
+REMOVECOMPLETEDEVENT = pygame.USEREVENT + 1
 
 class TetrisBoard:
 
@@ -174,10 +189,14 @@ class TetrisBoard:
         self.add_new_block()
         self.valid_game = True
 
+        self.completed_rows = []
+
     def add_new_block(self):
-        self.block = choice(BLOCKS)()
+        self.block: Block = choice(BLOCKS)()
         self.block_colour = Colour.randomise()
-        self.block_depth = 0
+        for n in range(choice([1, 2, 3])):
+            self.block = self.block.cw_rotation()
+        self.block_depth = -self.block.size
         self.block_pos = 3
 
 
@@ -185,11 +204,11 @@ class TetrisBoard:
         for row in range(self.block.size):
             for col in range(self.block.size):
                 if self.block and self.block.print_pixel(row, col):
-                    col_pos = col + side_step + self.block_pos
                     row_pos = row + vertical_step + self.block_depth
+                    col_pos = col + side_step + self.block_pos
                     side_collision = col_pos < 0 or col_pos >= self._n_cols
                     bottom_collision = row_pos >= self._n_rows
-                    if side_collision or bottom_collision or self._board[row_pos][col_pos]:
+                    if side_collision or bottom_collision or (row_pos >= 0 and self._board[row_pos][col_pos]):
                         return True
         return False
 
@@ -220,7 +239,11 @@ class TetrisBoard:
         for row in range(self._n_rows):
             for col in range(self._n_cols):
                 if self._board[row][col]:
-                    pygame.draw.rect(self.surface, self._board[row][col].colour, pygame.Rect(self.padded_block * col, self.padded_block * row, self.block_size, self.block_size), 2, 3)
+                    if row in self.completed_rows:
+                        pygame.draw.rect(self.surface, self._board[row][col].colour, pygame.Rect(self.padded_block * col, self.padded_block * row, self.block_size, self.block_size), 2, 3)
+                    else:
+                        pygame.draw.rect(self.surface, self._board[row][col].colour, pygame.Rect(self.padded_block * col, self.padded_block * row, self.block_size, self.block_size), 0, 3)
+
 
     def draw_block(self):
         if self.valid_game:
@@ -232,30 +255,36 @@ class TetrisBoard:
     def incorporate_block_to_pile(self):
         for row in range(self.block.size):
             for col in range(self.block.size):
-                if self.block and self.block.print_pixel(row, col):
+                if self.block and self.block.print_pixel(row, col) and (row + self.block_depth) >= 0:
                     self._board[row + self.block_depth][col + self.block_pos] = self.block_colour
 
-    def process_completed_row(self):
-        completed_rows = []
+    def process_completed_rows(self):
+        self.completed_rows = []
         for ri, row in enumerate(self._board):
-            if all(row):
-                completed_rows.append(ri)
+            if ri not in self.completed_rows and all(row):
+                self.completed_rows.append(ri)
 
-        if len(completed_rows):
-            for ri in reversed(completed_rows):
+        if len(self.completed_rows):
+            pygame.time.set_timer(REMOVECOMPLETEDEVENT, 200, True)
+
+
+    def remove_completed_rows(self):
+        if len(self.completed_rows):
+            for ri in self.completed_rows:
                 self._board.pop(ri)
-            len(self._board)
+                self._board.insert(0,[None] * self._n_cols)
 
-            self._board = [[None] * self._n_cols] * len(completed_rows) + self._board
+            self.completed_rows = []
+        self.process_completed_rows()
 
     def process_frame(self):
         t = time.time()
         if t - self.last_block_step >= self.step_iterval and self.valid_game:
             if not self.move_down():
                 self.incorporate_block_to_pile()
-                self.process_completed_row()
+                self.process_completed_rows()
                 self.add_new_block()
-                if self.detect_collision():
+                if self.detect_collision(vertical_step=1):
                     self.game_over()
             self.last_block_step = t
 
@@ -270,10 +299,16 @@ class TetrisBoard:
         self.draw_grid()
         self.draw_block()
 
+    def rotate_block(self):
+        previous_block_state = self.block
+        self.block = self.block.cw_rotation()
+        if self.detect_collision():
+            self.block = previous_block_state
+
     def event(self, event: Event) -> None:
         try:
             {
-                pygame.K_UP: self.block.cw_rotation,
+                pygame.K_UP: self.rotate_block,
                 pygame.K_LEFT: self.move_left,
                 pygame.K_RIGHT: self.move_right,
                 pygame.K_DOWN: self.move_down,
@@ -289,14 +324,23 @@ def main():
 
     running = True
 
-    tetris_board = TetrisBoard(8, 16)
+    board_size = (8, 16)
+
+    tetris_board = TetrisBoard(*board_size)
 
     while running:
-        clock.tick(60)
+        clock.tick(120)
         for event in pygame.event.get():
             # Did the user hit a key?
+
             if event.type == pygame.KEYDOWN:
-                tetris_board.event(event)
+                if event.key == pygame.K_r:
+                    tetris_board = TetrisBoard(*board_size)
+                else:
+                    tetris_board.event(event)
+
+            elif event.type == REMOVECOMPLETEDEVENT:
+                tetris_board.remove_completed_rows()
 
             # Did the user click the window close button? If so, stop the loop.
             elif event.type == pygame.QUIT:
