@@ -1,14 +1,11 @@
 import pygame
-
-from pygame import time as pg_time
-
 from tetris_board import TetrisBoard, REMOVE_COMPLETED_EVENT
 
 
 def main() -> None:
     # Initializing Pygame
     pygame.init()
-    clock = pg_time.Clock()
+    clock = pygame.time.Clock()
 
     running = True
 
@@ -36,5 +33,7 @@ def main() -> None:
 
         tetris_board.process_frame()
         pygame.display.flip()
+
+
 if __name__ == '__main__':
     main()

@@ -1,10 +1,7 @@
 import time
 import pygame
 from pygame.event import Event
-
 from random import choice
-
-from colours import Colour
 from tetris_blocks import Block, BLOCKS
 
 REMOVE_COMPLETED_EVENT = pygame.USEREVENT + 1
@@ -13,27 +10,44 @@ REMOVE_COMPLETED_EVENT = pygame.USEREVENT + 1
 class TetrisBoard:
 
     def __init__(self, n_cols: int, n_rows: int) -> None:
-        self._n_cols = n_cols
-        self._n_rows = n_rows
+        self.score: int = 0
+        self.level: int = 1
+        self._n_cols: int = n_cols
+        self._n_rows: int = n_rows
         self._board = None
         self.reset_board()
-        self.block_size = 30
-        self.padding = 1
-        self.padded_block = (self.block_size + 2 * self.padding)
-        self.surface = pygame.display.set_mode((self._n_cols * self.padded_block, self._n_rows * self.padded_block))
+        self.block_size: int = 30
+        self.padding: int = 1
+        self.padded_block: int = (self.block_size + 2 * self.padding)
+        self.surface: pygame.Surface = pygame.display.set_mode((self._n_cols * self.padded_block, self._n_rows * self.padded_block))
 
-        self.last_block_step = time.time()
-        self.step_interval = 0.5
+        self.last_block_step: float = time.time()
+        self.step_interval: float = 0.5
 
         self.add_new_block()
-        self.valid_game = True
+        self.valid_game: bool = True
 
-        self.completed_rows = []
+        self.completed_rows: list = []
+
+        self.print_score()
+
+    def print_score(self):
+        title = 'Tetris' if self.valid_game else 'Game Over'
+        level = 'lv-%02d' % self.level
+
+        pygame.display.set_caption('%s - %04d - %s' % (title, self.score, level))
 
     def add_new_block(self) -> None:
         self.block: Block = choice(BLOCKS)(3)
         for n in range(choice([1, 2, 3])):
             self.block.cw_rotation()
+
+    def block_is_inside_the_board(self) -> bool:
+        for row in range(self.block.size):
+            for col in range(self.block.size):
+                if self.block and self.block.print_pixel(row, col) and (row + self.block.depth_target) < 0:
+                    return False
+        return True
 
     def detect_collision(self, side_step: int = 0, vertical_step: int = 0) -> bool:
         for row in range(self.block.size):
@@ -56,11 +70,13 @@ class TetrisBoard:
             self.block.move_right()
 
     def move_down(self) -> bool:
-        if not self.detect_collision(vertical_step=1):
+        if self.detect_collision(vertical_step=1):
+            if not self.block_is_inside_the_board():
+                self.game_over()
+            return False
+        else:
             self.block.move_down()
             return True
-        else:
-            return False
 
     def reset_board(self) -> None:
         self._board = []
@@ -89,28 +105,30 @@ class TetrisBoard:
     def draw_block(self) -> None:
         if self.valid_game and self.block:
             self.block.draw_block(self.surface, self.block_size, self.padded_block)
-            # for row in range(self.block.size):
-            #     for col in range(self.block.size):
-            #         if self.block and self.block.print_pixel(row, col):
-            #             pygame.draw.rect(
-            #                 self.surface, self.block_colour.colour,
-            #                 pygame.Rect(
-            #                     self.padded_block * (col + self.block.x),
-            #                     self.padded_block * (row + self.block.depth),
-            #                     self.block_size, self.block_size
-            #                 ), 0, 3)
 
     def incorporate_block_to_pile(self) -> None:
         for row in range(self.block.size):
             for col in range(self.block.size):
-                if self.block and self.block.print_pixel(row, col) and (row + self.block.depth) >= 0:
+                if self.block and self.block.print_pixel(row, col) and (row + self.block.depth + 1) >= 0:
                     self._board[row + self.block.depth_target][col + self.block.x_target] = self.block.colour
+
+    def increment_level(self) -> None:
+        self.level += 1
+        self.step_interval *= 0.9
+
+    def update_score(self) -> None:
+        self.score += 1
+        if self.score % 10 == 0:
+            self.increment_level()
+
+        self.print_score()
 
     def process_completed_rows(self) -> None:
         self.completed_rows = []
         for ri, row in enumerate(self._board):
             if ri not in self.completed_rows and all(row):
                 self.completed_rows.append(ri)
+                self.update_score()
 
         if len(self.completed_rows):
             pygame.time.set_timer(REMOVE_COMPLETED_EVENT, 200, True)
@@ -131,16 +149,16 @@ class TetrisBoard:
                 self.incorporate_block_to_pile()
                 self.process_completed_rows()
                 self.add_new_block()
-                if self.detect_collision(vertical_step=1):
-                    self.game_over()
             self.last_block_step = t
 
         self.animate()
         self.draw_scene()
 
     def game_over(self) -> None:
+        self.incorporate_block_to_pile()
         print("Game Over")
         self.valid_game = False
+        self.print_score()
 
     def draw_scene(self) -> None:
         self.surface.fill((0, 0, 0))
@@ -148,22 +166,21 @@ class TetrisBoard:
         self.draw_block()
 
     def rotate_block(self) -> None:
-        previous_block_state = self.block
-        # self.block =
         self.block.cw_rotation()
         if self.detect_collision():
-            self.block = previous_block_state
+            self.block.undo_rotation()
 
     def event(self, event: Event) -> None:
-        match event.key:
-            case pygame.K_UP:
-                self.rotate_block()
-            case pygame.K_LEFT:
-                self.move_left()
-            case pygame.K_RIGHT:
-                self.move_right()
-            case pygame.K_DOWN:
-                self.move_down()
+        if self.valid_game:
+            match event.key:
+                case pygame.K_UP:
+                    self.rotate_block()
+                case pygame.K_LEFT:
+                    self.move_left()
+                case pygame.K_RIGHT:
+                    self.move_right()
+                case pygame.K_DOWN:
+                    self.move_down()
 
     def animate(self) -> None:
         self.block.animate_pos()
