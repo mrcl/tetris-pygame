@@ -1,8 +1,9 @@
+import asyncio
 import pygame
 from tetris_board import TetrisBoard, REMOVE_COMPLETED_EVENT
 
 
-def main() -> None:
+async def main() -> None:
     # Initializing Pygame
     pygame.init()
     clock = pygame.time.Clock()
@@ -15,6 +16,8 @@ def main() -> None:
 
     while running:
         clock.tick(240)
+        await asyncio.sleep(0)  # Very important, and keep it 0
+
         for event in pygame.event.get():
             # Did the user hit a key?
 
@@ -36,4 +39,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
