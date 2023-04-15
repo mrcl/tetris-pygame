@@ -46,7 +46,7 @@ class Block:
         self.depth_target += 1
 
     def animate_pos(self) -> None :
-        p = 1/8.
+        p = 1/5.
         self.x += p * (self.x_target - self.x)
         self.depth += p * (self.depth_target - self.depth)
 

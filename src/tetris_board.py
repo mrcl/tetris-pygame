@@ -16,8 +16,8 @@ class TetrisBoard:
         self._n_rows: int = n_rows
         self._board = None
         self.reset_board()
-        self.block_size: int = 30
-        self.padding: int = 1
+        self.block_size: int = 50
+        self.padding: int = 0.05 * self.block_size
         self.padded_block: int = (self.block_size + 2 * self.padding)
         self.surface: pygame.Surface = pygame.display.set_mode((self._n_cols * self.padded_block, self._n_rows * self.padded_block))
 

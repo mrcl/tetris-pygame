@@ -147,12 +147,31 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
+name = "pygbag"
+version = "0.7.1"
+description = "pygame wasm, package and run python/pygame directly in modern web browsers."
+category = "main"
+optional = false
+python-versions = ">=3.8"
+
+[package.dependencies]
+token-utils = "*"
+
+[[package]]
 name = "pygments"
 version = "2.10.0"
 description = "Pygments is a syntax highlighting package written in Python."
 category = "main"
 optional = false
 python-versions = ">=3.5"
+
+[[package]]
+name = "token-utils"
+version = "0.1.8"
+description = "Small utility to work with Python tokens"
+category = "main"
+optional = false
+python-versions = ">=3.6"
 
 [[package]]
 name = "traitlets"
@@ -176,7 +195,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "bc968acf5de557d3c9bc58ac75a41de6b3757c52a374a1fda0d5510050c1bd3a"
+content-hash = "d6641fdfa1a382fbef5ab4f794b591808c91fd54a2709320704a4f3d20676a23"
 
 [metadata.files]
 appnope = [
@@ -228,10 +247,12 @@ ptyprocess = [
     {file = "ptyprocess-0.7.0.tar.gz", hash = "sha256:5c5d0a3b48ceee0b48485e0c26037c0acd7d29765ca3fbb5cb3831d347423220"},
 ]
 pygame = []
+pygbag = []
 pygments = [
     {file = "Pygments-2.10.0-py3-none-any.whl", hash = "sha256:b8e67fe6af78f492b3c4b3e2970c0624cbf08beb1e493b2c99b9fa1b67a20380"},
     {file = "Pygments-2.10.0.tar.gz", hash = "sha256:f398865f7eb6874156579fdf36bc840a03cab64d1cde9e93d68f46a425ec52c6"},
 ]
+token-utils = []
 traitlets = [
     {file = "traitlets-5.1.0-py3-none-any.whl", hash = "sha256:03f172516916220b58c9f19d7f854734136dd9528103d04e9bf139a92c9f54c4"},
     {file = "traitlets-5.1.0.tar.gz", hash = "sha256:bd382d7ea181fbbcce157c133db9a829ce06edffe097bcf3ab945b435452b46d"},

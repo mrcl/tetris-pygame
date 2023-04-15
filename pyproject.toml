@@ -8,6 +8,7 @@ authors = ["Marcel Nogueira d'Eurydice <mrcl@sourcecrafting.com>"]
 python = "^3.9"
 pygame = "2.3.0"
 ipython = "^7.28.0"
+pygbag = "^0.7.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.28.0"
